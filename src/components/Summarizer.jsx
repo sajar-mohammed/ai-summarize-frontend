@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, Send, History, Sparkles, CheckCircle2, Clock, Zap, FileText, ArrowRight, LogOut, User } from 'lucide-react';
 import { auth, logOut } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5001/api';
+import { userService } from '../api/userService';
+import { summaryService } from '../api/summaryService';
 
 const Summarizer = () => {
     const [content, setContent] = useState('');
@@ -28,12 +27,12 @@ const Summarizer = () => {
 
     const fetchUserStatus = async (user) => {
         try {
-            const resp = await axios.post(`${API_BASE}/user/status`, {
+            const data = await userService.getStatus({
                 userId: user.uid,
                 email: user.email,
                 displayName: user.displayName
             });
-            setCredits(resp.data.credits);
+            setCredits(data.credits);
         } catch (err) {
             console.error('Failed to fetch user status', err);
         }
@@ -49,8 +48,8 @@ const Summarizer = () => {
     const fetchHistory = async () => {
         if (!currentUser?.uid) return;
         try {
-            const resp = await axios.get(`${API_BASE}/history?userId=${currentUser.uid}`);
-            setHistory(resp.data);
+            const data = await summaryService.getHistory(currentUser.uid);
+            setHistory(data);
         } catch (err) {
             console.error('Failed to fetch history', err);
         }
@@ -66,13 +65,13 @@ const Summarizer = () => {
         setLoading(true);
         setResult(null);
         try {
-            const resp = await axios.post(`${API_BASE}/summarize`, {
+            const data = await summaryService.generateSummary({
                 content: content,
                 title: content.substring(0, 30) + '...',
                 userId: currentUser.uid
             });
-            console.log('Backend response received:', resp.data);
-            setResult(resp.data);
+            console.log('Backend response received:', data);
+            setResult(data);
             setCredits(prev => prev - 1); // Decrement locally
             fetchHistory();
 
@@ -80,6 +79,8 @@ const Summarizer = () => {
                 document.getElementById('result-target')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
         } catch (err) {
+            // Error is handled globally in apiClient, but we can still alert here if needed
+            // or use the error message from the thrown error
             const errMsg = err.response?.data?.error || err.message;
             alert(`Error: ${errMsg}`);
         } finally {

@@ -5,9 +5,9 @@ import {
 } from 'lucide-react';
 import { auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { userService } from '../api/userService';
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5001/api';
+// Removed hardcoded API_BASE
 
 const Profile = () => {
     const navigate = useNavigate();
@@ -22,12 +22,12 @@ const Profile = () => {
 
     const fetchStatus = async () => {
         try {
-            const resp = await axios.post(`${API_BASE}/user/status`, {
+            const data = await userService.getStatus({
                 userId: currentUser.uid,
                 email: currentUser.email,
                 displayName: currentUser.displayName
             });
-            setUserStatus(resp.data);
+            setUserStatus(data);
         } catch (err) {
             console.error(err);
         }
